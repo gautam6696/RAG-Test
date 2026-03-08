@@ -1,1 +1,328 @@
-<h1>My Name is Ankit</h1>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>RAG Simulator</title>
+
+<style>
+
+body{
+font-family: Inter, Arial, sans-serif;
+background:#0f172a;
+color:white;
+margin:0;
+padding:0;
+}
+
+header{
+padding:20px;
+text-align:center;
+background:#020617;
+font-size:26px;
+font-weight:600;
+}
+
+.container{
+display:grid;
+grid-template-columns:1fr 1fr;
+gap:20px;
+padding:20px;
+}
+
+.card{
+background:#1e293b;
+border-radius:12px;
+padding:20px;
+box-shadow:0 10px 30px rgba(0,0,0,0.3);
+}
+
+.card h2{
+margin-top:0;
+font-size:20px;
+}
+
+textarea,input{
+width:100%;
+padding:10px;
+border-radius:8px;
+border:none;
+margin-top:8px;
+margin-bottom:10px;
+font-size:14px;
+}
+
+button{
+background:#6366f1;
+border:none;
+padding:10px 16px;
+border-radius:8px;
+color:white;
+cursor:pointer;
+font-weight:600;
+}
+
+button:hover{
+background:#4f46e5;
+}
+
+.output{
+background:#020617;
+padding:10px;
+border-radius:8px;
+max-height:200px;
+overflow:auto;
+font-size:13px;
+}
+
+.step{
+margin-bottom:20px;
+}
+
+.badge{
+background:#334155;
+padding:4px 8px;
+border-radius:6px;
+font-size:11px;
+margin-right:5px;
+}
+
+.chunk{
+background:#1e40af;
+padding:5px;
+border-radius:6px;
+margin:4px 0;
+font-size:12px;
+}
+
+.match{
+background:#065f46;
+padding:5px;
+border-radius:6px;
+margin:4px 0;
+font-size:12px;
+}
+
+.answer{
+background:#7c2d12;
+padding:10px;
+border-radius:8px;
+}
+
+footer{
+text-align:center;
+padding:10px;
+font-size:12px;
+opacity:.6;
+}
+
+</style>
+</head>
+
+<body>
+
+<header>
+RAG Simulator
+<br>
+<small style="font-size:14px">Interactive Simulation of Retrieval Augmented Generation</small>
+</header>
+
+<div class="container">
+
+<div class="card">
+
+<h2>Phase 1 — Knowledge Base Creation</h2>
+
+<div class="step">
+
+<label>Enter Document</label>
+
+<textarea id="document" rows="5">
+RAG stands for Retrieval Augmented Generation. It improves LLM accuracy by retrieving relevant information from external data sources.
+</textarea>
+
+<button onclick="chunkDocument()">Chunk Document</button>
+
+</div>
+
+<div class="step">
+
+<h3>Chunks</h3>
+
+<div id="chunks" class="output"></div>
+
+<button onclick="createEmbeddings()">Create Embeddings</button>
+
+</div>
+
+<div class="step">
+
+<h3>Vector Database</h3>
+
+<div id="vectordb" class="output"></div>
+
+</div>
+
+</div>
+
+<div class="card">
+
+<h2>Phase 2 — Query Retrieval</h2>
+
+<div class="step">
+
+<label>User Query</label>
+
+<input id="query" value="What is RAG and why is it useful?">
+
+<button onclick="search()">Run Retrieval</button>
+
+</div>
+
+<div class="step">
+
+<h3>Top Matching Chunks</h3>
+
+<div id="results" class="output"></div>
+
+</div>
+
+<div class="step">
+
+<h3>LLM Generated Answer</h3>
+
+<div id="answer" class="answer"></div>
+
+</div>
+
+</div>
+
+</div>
+
+<footer>
+Client-Side Educational Simulator
+</footer>
+
+<script>
+
+let chunks=[]
+let embeddings=[]
+let vectordb=[]
+
+function chunkDocument(){
+
+let text=document.getElementById("document").value
+
+let words=text.split(" ")
+
+let size=15
+chunks=[]
+
+for(let i=0;i<words.length;i+=size){
+
+let chunk=words.slice(i,i+size).join(" ")
+
+chunks.push(chunk)
+
+}
+
+let html=""
+
+chunks.forEach((c,i)=>{
+
+html+=`<div class="chunk"><span class="badge">chunk ${i}</span>${c}</div>`
+
+})
+
+document.getElementById("chunks").innerHTML=html
+
+}
+
+function fakeEmbedding(text){
+
+let vector=[]
+
+for(let i=0;i<10;i++){
+
+vector.push(Math.random())
+
+}
+
+return vector
+
+}
+
+function createEmbeddings(){
+
+vectordb=[]
+
+let html=""
+
+chunks.forEach((c,i)=>{
+
+let vector=fakeEmbedding(c)
+
+vectordb.push({chunk:c,vector:vector})
+
+html+=`<div><span class="badge">chunk ${i}</span> embedding: [${vector.map(v=>v.toFixed(2)).join(", ")}]</div>`
+
+})
+
+document.getElementById("vectordb").innerHTML=html
+
+}
+
+function similarity(v1,v2){
+
+let score=0
+
+for(let i=0;i<v1.length;i++){
+
+score+=v1[i]*v2[i]
+
+}
+
+return score
+
+}
+
+function search(){
+
+let query=document.getElementById("query").value
+
+let queryVector=fakeEmbedding(query)
+
+let scored=vectordb.map(d=>{
+
+return{
+chunk:d.chunk,
+score:similarity(queryVector,d.vector)
+}
+
+})
+
+scored.sort((a,b)=>b.score-a.score)
+
+let top=scored.slice(0,3)
+
+let html=""
+
+top.forEach(r=>{
+
+html+=`<div class="match">${r.chunk}</div>`
+
+})
+
+document.getElementById("results").innerHTML=html
+
+let context=top.map(t=>t.chunk).join(" ")
+
+let answer="Using retrieved knowledge: "+context+" -> This explains the user question: "+query
+
+document.getElementById("answer").innerText=answer
+
+}
+
+</script>
+
+</body>
+</html>
